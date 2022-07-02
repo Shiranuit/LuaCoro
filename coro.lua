@@ -23,32 +23,40 @@ end
 
 local function run(func, ...)
     local mainCoro = coroutine.create(func)
-    coroutines[#coroutines+1] = {
+    local task = {
         type='task',
         co=mainCoro,
         args={...},
-        first=true,
     }
+
+    coroutines[#coroutines+1] = task
+
+    local out = {coroutine.resume(task.co, table.unpack(task.args))}
+    if coroutine.status(task.co) == 'dead' then
+        if out[1] then
+            task.result = {select(2, table.unpack(out))}
+        else
+            task.error = out[2]
+        end
+    end
     
     local i = 1
     while #coroutines > 0 do
         local task = coroutines[i]
-        local out = {}
-        if task.first then
-            task.first = false
-            out = {coroutine.resume(task.co, table.unpack(task.args))}
-        else
-            out = {coroutine.resume(task.co)}
-        end
         if coroutine.status(task.co) == 'dead' then
-            if out[1] then
-                task.result = {select(2, table.unpack(out))}
-            else
-                task.error = out[2]
-            end
             table.remove(coroutines, i)
         else
-            i = i + 1
+            local out = {coroutine.resume(task.co)}
+            if coroutine.status(task.co) == 'dead' then
+                if out[1] then
+                    task.result = {select(2, table.unpack(out))}
+                else
+                    task.error = out[2]
+                end
+                table.remove(coroutines, i)
+            else
+                i = i + 1
+            end
         end
         if i > #coroutines then
             i = 1
@@ -63,9 +71,16 @@ local function async(func)
             type='task',
             co=co,
             args={...},
-            first=true,
         }
         coroutines[#coroutines + 1] = task
+        local out = {coroutine.resume(task.co, table.unpack(task.args))}
+        if coroutine.status(task.co) == 'dead' then
+            if out[1] then
+                task.result = {select(2, table.unpack(out))}
+            else
+                task.error = out[2]
+            end
+        end
         return task
     end
 end
@@ -89,7 +104,7 @@ local function await(obj, ...)
         end
         return table.unpack(task.result)
     else
-        return obj
+        return coroutine.yield(obj)
     end
 end
 
@@ -108,6 +123,7 @@ local function waitForAny(tasks)
         local task = tasks[i]
         if type(task) == 'table' and task.type == 'task' then
             running = true
+            break
         end
     end
 
