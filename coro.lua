@@ -139,8 +139,11 @@ local function _forward(func)
 end
 
 local function run(func)
-  local mainPromise = promise.new(func, false)
-  mainPromise.__asyncMethod = true
+  local mainPromise
+  if func then
+    mainPromise = promise.new(func, false)
+    mainPromise.__asyncMethod = true
+  end
 
   local i = 1
   while #promises > 0 do
@@ -183,10 +186,12 @@ local function run(func)
     end
   end
   
-  if mainPromise.__status == 'resolved' then
-    return table.unpack(mainPromise.__value)
-  else
-    error(mainPromise.__value)
+  if func then
+    if mainPromise.__status == 'resolved' then
+      return table.unpack(mainPromise.__value)
+    else
+      error(mainPromise.__value)
+    end
   end
 end
 
