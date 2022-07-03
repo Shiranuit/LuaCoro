@@ -2,6 +2,10 @@ local promises = {}
 local promiseId = 1
 local promise = {}
 
+if _VERSION == 'Lua 5.1' then
+  table.unpack = unpack
+end
+
 function promise.isPromise(obj)
   return obj and type(obj) == 'table' and obj.__type == 'promise'
 end
