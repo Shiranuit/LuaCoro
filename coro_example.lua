@@ -14,7 +14,7 @@ local showValue = coro.async(function(start, stop, showPairOnly)
     return sum
 end)
 
-coro.run(function()
+local main = coro.async(function()
     -- for i in coro.range(0, 10) do
     --     print(i)
     -- end
@@ -26,3 +26,7 @@ coro.run(function()
     local results = coro.waitForAny({task1, task2})
     print(results)
 end)
+
+main()
+
+coro.run()
