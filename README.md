@@ -76,52 +76,6 @@ Await the result of a promise and returns what the promised was resolved to
 await(<promise> or <any>)
 ```
 
-### all
-
-Takes a sequential table of promises and returns a new promise that will
-be resolved when all the promises are resolved.
-
-The promise will be resolved with a table containing the result of all the resolved promises.
-
-**signature**
-
-```lua
-all(<promise[]>): <any[]>
-```
-
-### waitForAll
-
-Same as [all](#all) but await directly
-
-**signature**
-
-```lua
-waitForAll(<promise[]>): <any[]>
-```
-
-### any
-
-Takes a sequential table of promises and returns a new promise that will
-be resolved when one of the promises is resolved.
-
-The promise will be resolved with the result of the first resolved promise.
-
-**signature**
-
-```lua
-any(<promise[]>): <any>
-```
-
-### waitForAny
-
-Same as [any](#any) but await directly
-
-**signature**
-
-```lua
-waitForAny(<promise[]>): <any>
-```
-
 ### range
 
 Allows you to make ranged for loop that will not block the coro execution loop
@@ -244,4 +198,50 @@ Returns true if the promise is pending to be resolved or errored
 
 ```lua
 promise:isPending(): <bool>
+```
+
+### all
+
+Takes a sequential table of promises and returns a new promise that will
+be resolved when all the promises are resolved.
+
+The promise will be resolved with a table containing the result of all the resolved promises.
+
+**signature**
+
+```lua
+all(<promise[]>): <any[]>
+```
+
+### waitForAll
+
+Same as [all](#all) but await directly
+
+**signature**
+
+```lua
+waitForAll(<promise[]>): <any[]>
+```
+
+### any
+
+Takes a sequential table of promises and returns a new promise that will
+be resolved when one of the promises is resolved.
+
+The promise will be resolved with the result of the first resolved promise.
+
+**signature**
+
+```lua
+any(<promise[]>): <any>
+```
+
+### waitForAny
+
+Same as [any](#any) but await directly
+
+**signature**
+
+```lua
+waitForAny(<promise[]>): <any>
 ```
