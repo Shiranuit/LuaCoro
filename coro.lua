@@ -1,6 +1,7 @@
 local promises = {}
 local promiseId = 1
 local promise = {}
+local onUnhandledRejection
 
 if _VERSION == 'Lua 5.1' then
   table.unpack = unpack
@@ -10,64 +11,68 @@ function promise.isPromise(obj)
   return obj and type(obj) == 'table' and obj.__type == 'promise'
 end
 
-function promise.status(obj)
-  return obj.__status
+function promise.status(prom)
+  return prom.__status
 end
 
-function promise.resolve(obj, ...)
-  obj.__status = 'resolved'
-  obj.__value = { ... }
+function promise.resolve(prom, ...)
+  prom.__status = 'resolved'
+  prom.__value = { ... }
 end
 
-function promise.error(obj, err)
-  obj.__status = 'errored'
-  obj.__value = err
+function promise.error(prom, err)
+  prom.__status = 'errored'
+  prom.__value = { err }
 end
 
-function promise.await(obj)
-  while obj.__status == 'pending' do
+function promise.await(prom)
+  prom.__awaited = true
+
+  while prom.__status == 'pending' do
     coroutine.yield()
   end
 
-  if obj.__status == 'resolved' then
-    if promise.isPromise(obj.__value[1]) then
-      return promise.await(obj.__value[1])
+  if prom.__status == 'resolved' then
+    if promise.isPromise(prom.__value[1]) then
+      return promise.await(prom.__value[1])
     end
-    return table.unpack(obj.__value)
+    return table.unpack(prom.__value)
   else
-    error(obj.__value)
+    error(prom.__value[1])
   end
 end
 
-function promise.chain(obj, func)
+function promise.chain(prom, func)
   assert(type(func) == 'function', 'function expected')
 
   local newPromise = promise.new(func, false)
-  newPromise.__trigger = obj
+  newPromise.__trigger = prom
+  prom.__chained = true
   newPromise.__asyncMethod = true
   return newPromise
 end
 
-function promise.catch(obj, func)
+function promise.catch(prom, func)
   assert(type(func) == 'function', 'function expected')
 
   local newPromise = promise.new(func, false)
-  newPromise.__trigger = obj
+  newPromise.__trigger = prom
+  prom.__catched = true
   newPromise.__asyncMethod = true
   newPromise.__catch = true
   return newPromise
 end
 
-function promise.isErrored(obj)
-  return obj.__status == 'errored'
+function promise.isErrored(prom)
+  return prom.__status == 'errored'
 end
 
-function promise.isResolved(obj)
-  return obj.__status == 'resolved'
+function promise.isResolved(prom)
+  return prom.__status == 'resolved'
 end
 
-function promise.isPending(obj)
-  return obj.__status == 'pending'
+function promise.isPending(prom)
+  return prom.__status == 'pending'
 end
 
 function promise.new(func, run)
@@ -82,6 +87,9 @@ function promise.new(func, run)
     __catch = false,
     __asyncMethod = false,
     __id = promiseId,
+    __awaited = false,
+    __chained = false,
+    __catched = false,
     status = promise.status,
     resolve = promise.resolve,
     error = promise.error,
@@ -95,14 +103,14 @@ function promise.new(func, run)
 
   promiseId = promiseId + 1
 
-  promises[#promises + 1] = newPromise
+  table.insert(promises, newPromise)
 
   if run then
     local resolve = function(...)
       promise.resolve(newPromise, ...)
     end
-    local error = function(...)
-      promise.error(newPromise, ...)
+    local error = function(err)
+      promise.error(newPromise, err)
     end
 
     local out = { coroutine.resume(co, resolve, error) }
@@ -138,29 +146,22 @@ local function _forward(func)
   end
 end
 
-local function run(mode)
-  if not mode then
-    mode = 'default'
-  end
+local function runStep()
+  local promCount = #promises
 
-  local i = 1
-  while #promises > 0 do
+  for i=1, promCount do
     local prom = promises[i]
-    if coroutine.status(prom.__coroutine) == 'dead' or not promise.isPending(prom) then
-      table.remove(promises, i)
-    elseif not prom.__trigger or not promise.isPending(prom.__trigger) then
+    if (not prom.__trigger or not promise.isPending(prom.__trigger)) and coroutine.status(prom.__coroutine) ~= "dead" then
 
       local skip = false
       if prom.__trigger and prom.__catch and promise.isResolved(prom.__trigger) then
         prom.__status = 'resolved'
         prom.__value = prom.__trigger.__value
         skip = true
-        table.remove(promises, i)
       elseif prom.__trigger and prom.__catch == false and promise.isErrored(prom.__trigger) then
         prom.__status = 'errored'
-        prom.__value = { prom.__trigger.__value }
+        prom.__value = prom.__trigger.__value
         skip = true
-        table.remove(promises, i)
       end
 
       if not skip then
@@ -168,23 +169,43 @@ local function run(mode)
 
         if coroutine.status(prom.__coroutine) == 'dead' then
           if prom.__asyncMethod or out[1] == false then
-            prom.__value = out[1] and { select(2, table.unpack(out)) } or out[2]
+            prom.__value = { select(2, table.unpack(out)) }
             prom.__status = out[1] and 'resolved' or 'errored'
           end
-          table.remove(promises, i)
-        else
-          i = i + 1
         end
       end
-    else
-      i = i + 1
     end
-    if i > #promises then
-      if mode == 'nowait' then
-        return true
+  end
+  
+  local unhandled = {}
+
+  for i=promCount, 1, -1 do
+    local prom = promises[i]
+    if prom.__status ~= 'pending' then
+      if onUnhandledRejection
+        and prom.__status == 'errored'
+        and not prom.__catched
+        and not prom.__awaited
+        and not prom.__chained
+      then
+        onUnhandledRejection(prom.__value[1], prom)
       end
-      i = 1
+      table.remove(promises, i)
     end
+  end
+end
+
+local function run(mode)
+  if not mode then
+    mode = 'default'
+  end
+
+  if mode == 'nowait'then
+    return runStep()
+  end
+
+  while #promises > 0 do
+    runStep()
   end
   return false
 end
@@ -200,7 +221,7 @@ local function async(func)
     table.remove(out, 1)
 
     if coroutine.status(newPromise.__coroutine) == 'dead' then
-      newPromise.__value = success and out or out[1]
+      newPromise.__value = out
       newPromise.__status = success and 'resolved' or 'errored'
     end
 
@@ -236,7 +257,7 @@ local function any(promises)
     for i = 1, #promises do
       local obj = promises[i]
       if promise.isPromise(obj) then
-        filteredPromises[#filteredPromises + 1] = obj
+        table.insert(filteredPromises, obj)
       end
     end
 
@@ -276,6 +297,12 @@ return {
   loopMode = { default = 'default', nowait = 'nowait' },
   async = async,
   await = await,
+  onUnhandledRejection = function(func)
+    if type(func) ~= "function" then
+      error("onUnhandledRejection must be a function")
+    end
+    onUnhandledRejection = func
+  end,
   promise = {
     new = function(func)
       return promise.new(func, true)
