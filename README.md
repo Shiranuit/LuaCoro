@@ -7,13 +7,21 @@ Lua library made to do Async / Await using coroutines.
 
 ### run
 
-This will run the coro loop that will do all the async work
-and will only resolved when there is no promises left.
+This will run the coro loop that will do all the async work.
+
+Modes:
+- **nil**: Defaulted to the "default" mode
+- **default**: Block until there is no more async promises to be resolved
+- **nowait**: Do one run of the async loop and return true if there is still more work to do
+
+Return:
+- **true**: if there is still some work to do
+- **false**: if every promise has been resolved
 
 **Signature**
 
 ```lua
-run([<function>])
+run(mode: <string> or <nil>): <boolean>
 ```
 
 **example**
