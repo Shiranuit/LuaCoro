@@ -117,7 +117,7 @@ function promise.new(func, run)
 
     local success = out[1]
 
-    if coroutine.status(newPromise.__coroutine) == 'dead' and success == false then
+    if success == false then
       promise.error(newPromise, out[1])
     end
   end
@@ -167,21 +167,19 @@ local function runStep()
       if not skip then
         local out = { coroutine.resume(prom.__coroutine, table.unpack(prom.__trigger and prom.__trigger.__value or {})) }
 
-        if coroutine.status(prom.__coroutine) == 'dead' then
-          if prom.__asyncMethod or out[1] == false then
-            prom.__value = { select(2, table.unpack(out)) }
-            prom.__status = out[1] and 'resolved' or 'errored'
-          end
+        if out[1] == false
+          or (prom.__asyncMethod and coroutine.status(prom.__coroutine) == 'dead')
+        then
+          prom.__value = { select(2, table.unpack(out)) }
+          prom.__status = out[1] and 'resolved' or 'errored'
         end
       end
     end
   end
-  
-  local unhandled = {}
 
   for i=promCount, 1, -1 do
     local prom = promises[i]
-    if prom.__status ~= 'pending' then
+    if prom.__status ~= 'pending' or coroutine.status(prom.__coroutine) == 'dead' then
       if onUnhandledRejection
         and prom.__status == 'errored'
         and not prom.__catched
@@ -193,6 +191,8 @@ local function runStep()
       table.remove(promises, i)
     end
   end
+
+  return #promises > 0
 end
 
 local function run(mode)
@@ -204,8 +204,7 @@ local function run(mode)
     return runStep()
   end
 
-  while #promises > 0 do
-    runStep()
+  while runStep() do
   end
   return false
 end
