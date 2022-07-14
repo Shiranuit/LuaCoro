@@ -232,7 +232,8 @@ local function await(obj)
   if promise.isPromise(obj) then
     return promise.await(obj)
   end
-  return coroutine.yield(obj)
+  coroutine.yield()
+  return obj
 end
 
 local function all(promises)
