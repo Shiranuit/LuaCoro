@@ -138,11 +138,9 @@ local function _forward(func)
   end
 end
 
-local function run(func)
-  local mainPromise
-  if func then
-    mainPromise = promise.new(func, false)
-    mainPromise.__asyncMethod = true
+local function run(mode)
+  if not mode then
+    mode = 'default'
   end
 
   local i = 1
@@ -182,17 +180,13 @@ local function run(func)
       i = i + 1
     end
     if i > #promises then
+      if mode == 'nowait' then
+        return true
+      end
       i = 1
     end
   end
-  
-  if func then
-    if mainPromise.__status == 'resolved' then
-      return table.unpack(mainPromise.__value)
-    else
-      error(mainPromise.__value)
-    end
-  end
+  return false
 end
 
 local function async(func)
@@ -279,12 +273,9 @@ end
 return {
   range = _forward(range),
   run = run,
+  loopMode = { default = 'default', nowait = 'nowait' },
   async = async,
   await = await,
-  waitForAll = waitForAll,
-  waitForAny = waitForAny,
-  all = all,
-  any = any,
   promise = {
     new = function(func)
       return promise.new(func, true)
@@ -293,5 +284,9 @@ return {
     isResolved = promise.isResolved,
     isPending = promise.isPending,
     isPromise = promise.isPromise,
+    waitForAll = waitForAll,
+    waitForAny = waitForAny,
+    all = all,
+    any = any,
   }
 }
