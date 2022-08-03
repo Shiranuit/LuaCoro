@@ -41,21 +41,6 @@ main()
 coro.run()
 ```
 
-
-```lua
-local coro = require('coro')
-
-local asyncAdd = coro.async(function(A, B)
-  return A + B
-end)
-
-function main()
-  print(coro.await(asyncAdd(2, 2)))
-end
-
-coro.run(main)
-```
-
 ### async
 
 Transform a function into an async function that returns a promise when called
