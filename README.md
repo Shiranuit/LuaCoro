@@ -7,13 +7,21 @@ Lua library made to do Async / Await using coroutines.
 
 ### run
 
-This will run the coro loop that will do all the async work
-and will only resolved when there is no promises left.
+This will run the coro loop that will do all the async work.
+
+Modes:
+- **nil**: Defaulted to the "default" mode
+- **default**: Block until there is no more async promises to be resolved
+- **nowait**: Do one run of the async loop and return true if there is still more work to do
+
+Return:
+- **true**: if there is still some work to do
+- **false**: if every promise has been resolved
 
 **Signature**
 
 ```lua
-run([<function>])
+run(mode: <string> or <nil>): <boolean>
 ```
 
 **example**
@@ -31,21 +39,6 @@ end)
 
 main()
 coro.run()
-```
-
-
-```lua
-local coro = require('coro')
-
-local asyncAdd = coro.async(function(A, B)
-  return A + B
-end)
-
-function main()
-  print(coro.await(asyncAdd(2, 2)))
-end
-
-coro.run(main)
 ```
 
 ### async
@@ -74,52 +67,6 @@ Await the result of a promise and returns what the promised was resolved to
 
 ```lua
 await(<promise> or <any>)
-```
-
-### all
-
-Takes a sequential table of promises and returns a new promise that will
-be resolved when all the promises are resolved.
-
-The promise will be resolved with a table containing the result of all the resolved promises.
-
-**signature**
-
-```lua
-all(<promise[]>): <any[]>
-```
-
-### waitForAll
-
-Same as [all](#all) but await directly
-
-**signature**
-
-```lua
-waitForAll(<promise[]>): <any[]>
-```
-
-### any
-
-Takes a sequential table of promises and returns a new promise that will
-be resolved when one of the promises is resolved.
-
-The promise will be resolved with the result of the first resolved promise.
-
-**signature**
-
-```lua
-any(<promise[]>): <any>
-```
-
-### waitForAny
-
-Same as [any](#any) but await directly
-
-**signature**
-
-```lua
-waitForAny(<promise[]>): <any>
 ```
 
 ### range
@@ -244,4 +191,50 @@ Returns true if the promise is pending to be resolved or errored
 
 ```lua
 promise:isPending(): <bool>
+```
+
+### all
+
+Takes a sequential table of promises and returns a new promise that will
+be resolved when all the promises are resolved.
+
+The promise will be resolved with a table containing the result of all the resolved promises.
+
+**signature**
+
+```lua
+all(<promise[]>): <any[]>
+```
+
+### waitForAll
+
+Same as [all](#all) but await directly
+
+**signature**
+
+```lua
+waitForAll(<promise[]>): <any[]>
+```
+
+### any
+
+Takes a sequential table of promises and returns a new promise that will
+be resolved when one of the promises is resolved.
+
+The promise will be resolved with the result of the first resolved promise.
+
+**signature**
+
+```lua
+any(<promise[]>): <any>
+```
+
+### waitForAny
+
+Same as [any](#any) but await directly
+
+**signature**
+
+```lua
+waitForAny(<promise[]>): <any>
 ```
