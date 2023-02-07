@@ -5,6 +5,18 @@ function beforeEach()
   coro.cleanup()
 end
 
+test('it should resolve result from previously awaited async function', function ()
+  local finalResult = ''
+  local thirddef = coro.async(function() local result = coro.await('value') return result end)
+  local seconddef = coro.async(function() local result = coro.await(thirddef()) return result end)
+  local firstdef = coro.async(function() local result = coro.await(seconddef()) return result end)
+  local maindef = coro.async(function() finalResult = coro.await(firstdef()) end)
+
+  maindef()
+  coro.run()
+  assert(finalResult == 'value', 'Expected finalResult to be "value" since it should have been propagated through the promise chain')
+end)
+
 test('it should fail if called outside of an async function', function()
   local success, err = pcall(coro.await, Promise.new(function(resolve, reject)
     resolve(42)
