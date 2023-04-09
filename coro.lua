@@ -40,7 +40,7 @@ function promise.await(prom)
     end
     return table.unpack(prom.__value)
   else
-    error(prom.__value[1], 0)
+    error(prom.__value[1], 2)
   end
 end
 
