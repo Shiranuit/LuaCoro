@@ -87,6 +87,26 @@ range(start: <number>, stop: <number>, [step: <number>])
   end
 ```
 
+### onUnhandledRejection
+
+Register a callback that is going to be called when an exception occurs in a promise without being catched
+
+**signature**
+
+```lua
+onUnhandledRejection(function(error: string, promise: <promise>))
+```
+
+**example**
+
+```lua
+local coro = require('coro')
+
+coro.onUnhandledRejection(function(err, promise)
+  print(err, promise)
+end)
+```
+
 ### promise.new
 
 Coro allows you to create promises that can be resolved later
@@ -111,7 +131,7 @@ the function will be given the result of what the promise has been resolved to.
 **signature**
 
 ```lua
-promise:chain(<function>)
+<promise>:chain(<function>)
 ```
 
 #### catch
@@ -121,7 +141,7 @@ Chain a catch promise that will be executed if an error occurs in the promise
 **signature**
 
 ```lua
-promise:catch(<function>)
+<promise>:catch(<function>)
 ```
 
 #### await
@@ -131,7 +151,7 @@ Await a pending promise and returns what the promise was resolved to
 **signature**
 
 ```lua
-promise:await(): <any>
+<promise>:await(): <any>
 ```
 
 #### resolve
@@ -141,7 +161,7 @@ Resolves the promise with then given value
 **signature**
 
 ```lua
-promise:resolve(...)
+<promise>:resolve(...)
 ```
 
 #### error
@@ -151,7 +171,7 @@ Resolves the promise with an error
 **signature**
 
 ```lua
-promise:error(err)
+<promise>:error(err)
 ```
 
 #### status
@@ -161,10 +181,10 @@ Returns the status of the promise, either "pending", "resolved" or "errored"
 **signature**
 
 ```lua
-promise:status(): 'pending' | 'resolved' | 'errored'
+<promise>:status(): 'pending' | 'resolved' | 'errored'
 ```
 
-#### isErrored
+#### promise.isErrored
 
 Returns true if the promise is errored
 
@@ -173,27 +193,38 @@ Returns true if the promise is errored
 ```lua
 promise:isErrored(): <bool>
 ```
-#### isResolved
+
+```lua
+promise.isErrored(<promise>): <bool>
+```
+#### promise.isResolved
 
 Returns true if the promise is resolved
 
 **signature**
 
 ```lua
-promise:isResolved(): <bool>
+<promise>:isResolved(): <bool>
+```
+```lua
+promise.isResolved(<promise>): <bool>
 ```
 
-#### isPending
+#### promise.isPending
 
 Returns true if the promise is pending to be resolved or errored
 
 **signature**
 
 ```lua
-promise:isPending(): <bool>
+<promise>:isPending(): <bool>
 ```
 
-### all
+```lua
+promise.isPending(<promise>): <bool>
+```
+
+### promise.all
 
 Takes a sequential table of promises and returns a new promise that will
 be resolved when all the promises are resolved.
@@ -206,17 +237,17 @@ The promise will be resolved with a table containing the result of all the resol
 all(<promise[]>): <any[]>
 ```
 
-### waitForAll
+### promise.waitForAll
 
 Same as [all](#all) but await directly
 
 **signature**
 
 ```lua
-waitForAll(<promise[]>): <any[]>
+promise.waitForAll(<promise[]>): <any[]>
 ```
 
-### any
+### promise.any
 
 Takes a sequential table of promises and returns a new promise that will
 be resolved when one of the promises is resolved.
@@ -226,15 +257,15 @@ The promise will be resolved with the result of the first resolved promise.
 **signature**
 
 ```lua
-any(<promise[]>): <any>
+promise.any(<promise[]>): <any>
 ```
 
-### waitForAny
+### promise.waitForAny
 
 Same as [any](#any) but await directly
 
 **signature**
 
 ```lua
-waitForAny(<promise[]>): <any>
+promise.waitForAny(<promise[]>): <any>
 ```
