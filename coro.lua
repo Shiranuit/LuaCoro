@@ -22,9 +22,10 @@ function promise.resolve(prom, ...)
   prom.__value = { ... }
 end
 
-function promise.error(prom, err)
+function promise.error(prom, err, noStacktrace)
   prom.__status = 'errored'
   prom.__value = { err }
+  prom.__stacktrace = not noStacktrace
 end
 
 function promise.await(prom)
@@ -40,7 +41,7 @@ function promise.await(prom)
     end
     return table.unpack(prom.__value)
   else
-    error(prom.__value[1], 2)
+    error(prom.__value[1], prom.__stacktrace and 2 or 0)
   end
 end
 
@@ -101,6 +102,7 @@ function promise.new(func, run, insert)
     __dependentPromises = {},
     __dependencyCount = 0,
     __triggerCount = 0,
+    __stacktrace = true,
     status = promise.status,
     resolve = promise.resolve,
     error = promise.error,
@@ -125,8 +127,8 @@ function promise.new(func, run, insert)
     local resolve = function(...)
       promise.resolve(newPromise, ...)
     end
-    local error = function(err)
-      promise.error(newPromise, err)
+    local error = function(err, noStacktrace)
+      promise.error(newPromise, err, noStacktrace)
     end
 
     local out = { coroutine.resume(co, resolve, error) }
@@ -213,6 +215,7 @@ local function runStep()
         if onUnhandledRejection
           and prom.__status == 'errored'
         then
+        
           onUnhandledRejection(prom.__value[1], prom)
         end
       end
@@ -231,7 +234,9 @@ local function runStep()
           local dependentPromise = prom.__dependentPromises[i]
           dependentPromise.__triggerCount = dependentPromise.__triggerCount + 1
           if dependentPromise.__dependencyCount == dependentPromise.__triggerCount then
-            table.insert(promises_next, dependentPromise)
+            if dependentPromise.__status == 'pending' then
+              table.insert(promises_next, dependentPromise)
+            end
           end
         end
       end
