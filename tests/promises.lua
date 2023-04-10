@@ -162,7 +162,7 @@ end)
 
 test('Promise.all should be rejected if one of the promises is rejected', function()
   local prom1 = Promise.new(function(resolve, reject)
-    reject('err')
+    reject('err', true)
   end)
 
   local prom2 = Promise.new(function(resolve, reject)
